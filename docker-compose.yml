@@ -16,6 +16,10 @@ services:
       DB_USERNAME: hospital
       DB_PASSWORD: ${DB_PASSWORD}
       REDIS_HOST: cache
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
     depends_on:
       db:
         condition: service_healthy
@@ -46,8 +50,6 @@ services:
       timeout: 5s
       retries: 5
     networks: [internal]
-    ports:
-      - "127.0.0.1:3306:3306"   # only accessible from host, not internet
 
   # Redis Cache
   cache:
