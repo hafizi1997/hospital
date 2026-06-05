@@ -1,4 +1,9 @@
 :80 {
+    # Sanctum CSRF cookie (must reach Laravel, not the frontend)
+    handle /sanctum/* {
+        reverse_proxy backend:80
+    }
+
     # Laravel API
     handle /api/* {
         reverse_proxy backend:80

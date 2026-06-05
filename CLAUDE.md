@@ -86,6 +86,8 @@ Route::prefix('v1')->group(function () {
 
 Every response goes through a Resource — never return raw models or raw arrays.
 
+`JsonResource::withoutWrapping()` is set globally in `AppServiceProvider`, so responses are flat (no `{"data": ...}` envelope). Single resources return `{"id": 1, ...}` directly. Paginated collections still include `{"data": [...], "links": {...}, "meta": {...}}`.
+
 ```php
 // app/Http/Resources/PatientResource.php
 public function toArray(Request $request): array

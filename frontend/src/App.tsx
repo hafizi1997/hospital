@@ -1,95 +1,40 @@
-import { useEffect, useState } from 'react'
-import { getHealth, type ApiHealth } from './lib/api'
-import './App.css'
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { ProtectedLayout } from "@/components/shared/ProtectedLayout";
+import { useMe } from "@/features/auth/api/useMe";
+import { LoginPage } from "@/features/auth/pages/LoginPage";
+import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
+import { MarketPlacePage } from "./features/marketplace/pages/MarketPlace";
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { isLoading } = useMe();
+  // useMe sets Zustand inside its queryFn, so by the time isLoading flips to
+  // false the store is already populated — no useEffect needed here.
 
-function App() {
-  const [health, setHealth] = useState<ApiHealth | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <p className="text-sm text-gray-400">Loading…</p>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    let isCurrent = true
-
-    async function loadHealth() {
-      try {
-        setIsLoading(true)
-        const result = await getHealth()
-
-        if (isCurrent) {
-          setHealth(result)
-          setError(null)
-        }
-      } catch (caught) {
-        if (isCurrent) {
-          setHealth(null)
-          setError(caught instanceof Error ? caught.message : 'Unable to reach the API')
-        }
-      } finally {
-        if (isCurrent) {
-          setIsLoading(false)
-        }
-      }
-    }
-
-    void loadHealth()
-
-    return () => {
-      isCurrent = false
-    }
-  }, [])
-
-  const databaseConnected = health?.database.connected ?? false
-
-  return (
-    <main className="app-shell">
-      <section className="status-panel" aria-labelledby="page-title">
-        <div className="status-header">
-          <div>
-            <p className="eyebrow">HospitalRun Platform</p>
-            <h1 id="page-title">Application connection status</h1>
-          </div>
-          <span className={databaseConnected ? 'badge badge-ok' : 'badge badge-warn'}>
-            {databaseConnected ? 'Connected' : 'Needs attention'}
-          </span>
-        </div>
-
-        <div className="connection-grid">
-          <article className="connection-card">
-            <span className="label">Frontend</span>
-            <strong>React + Vite</strong>
-            <p>Served by Caddy and calling Laravel through relative API routes.</p>
-          </article>
-          <article className="connection-card">
-            <span className="label">Backend</span>
-            <strong>{health?.service ?? 'Laravel API'}</strong>
-            <p>{isLoading ? 'Checking API availability...' : error ?? `Environment: ${health?.environment}`}</p>
-          </article>
-          <article className="connection-card">
-            <span className="label">Database</span>
-            <strong>{databaseConnected ? 'MySQL connected' : 'MySQL not confirmed'}</strong>
-            <p>
-              {health
-                ? `${health.database.connection} / ${health.database.database}`
-                : 'Waiting for backend health response.'}
-            </p>
-          </article>
-        </div>
-
-        <div className="details">
-          <div>
-            <span className="label">API endpoint</span>
-            <code>/api/health</code>
-          </div>
-          <div>
-            <span className="label">Last checked</span>
-            <code>{health?.timestamp ?? 'Not available'}</code>
-          </div>
-        </div>
-
-        {error ? <p className="error-message">{error}</p> : null}
-      </section>
-    </main>
-  )
+  return <>{children}</>;
 }
 
-export default App
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthGate>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/marketplace" element={<MarketPlacePage />} />
+          <Route element={<ProtectedLayout />}>
+            <Route path="/" element={<DashboardPage />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthGate>
+    </BrowserRouter>
+  );
+}
+
+export default App;

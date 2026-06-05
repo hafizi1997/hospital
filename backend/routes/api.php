@@ -1,30 +1,51 @@
 <?php
 
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
     $database = [
-        'connected' => false,
+        'connected'  => false,
         'connection' => config('database.default'),
-        'database' => config('database.connections.'.config('database.default').'.database'),
-        'error' => null,
+        'database'   => config('database.connections.'.config('database.default').'.database'),
+        'error'      => null,
     ];
 
     try {
         DB::connection()->getPdo();
         DB::select('select 1');
-
         $database['connected'] = true;
     } catch (\Throwable $exception) {
         $database['error'] = $exception->getMessage();
     }
 
     return response()->json([
-        'status' => $database['connected'] ? 'ok' : 'degraded',
-        'service' => config('app.name'),
+        'status'      => $database['connected'] ? 'ok' : 'degraded',
+        'service'     => config('app.name'),
         'environment' => app()->environment(),
-        'database' => $database,
-        'timestamp' => now()->toISOString(),
+        'database'    => $database,
+        'timestamp'   => now()->toISOString(),
     ], $database['connected'] ? 200 : 503);
+});
+
+Route::prefix('v1')->group(function () {
+
+    // Public — rate limited to 5 req/min per IP
+    Route::middleware('throttle:auth')->group(function () {
+        Route::post('/auth/login', [AuthController::class, 'login']);
+    });
+
+    // Authenticated
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/auth/logout', [AuthController::class, 'logout']);
+        Route::get('/auth/me', [AuthController::class, 'me']);
+
+        // Admin only
+        Route::middleware('role:admin')->group(function () {
+            Route::apiResource('users', UserController::class);
+        });
+    });
+
 });
